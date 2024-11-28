@@ -120,3 +120,34 @@ This document describes spdm_requester_emu and spdm_responder_emu tool. It can b
    [spdm_dump](https://github.com/DMTF/spdm-dump/blob/main/doc/spdm_dump.md) tool can be used to parse the pcap file for offline analysis.
 
    NOTE: Not all combination is supported. Please file issue or submit patch for them if you find something is not expected.
+
+### SPDM MCTP kernel
+New transport type MCTP_KERNEL with option eid and net.
+1. Setup MCTP network with `mctp` tool.
+```bash
+
+IPA=127.0.0.1
+IPB=127.0.0.1
+
+# Side A is eid 160
+socat  tun,iff-up,tun-name=tunA udp-datagram:$IPB:9933,bind=$IPA:9922 &
+sleep 0.5
+mctp link set tunA net 10
+mctp addr add 160 dev tunA
+mctp route add 161 via tunA
+
+# Side B is eid 161
+socat tun,iff-up,tun-name=tunB udp-datagram:$IPA:9922,bind=$IPB:9933 &
+sleep 0.5
+mctp link set tunB net 11
+mctp addr add 161 dev tunB
+mctp route add 160 via tunB
+```
+2. Start responder with eid = 161 attach to network 11.
+```bash
+spdm_responder_emu --trans MCTP_KERNEL --eid 161 --net 11 --pcap SpdmResponder.pcap
+```
+3. Start requester to communicate with responder has eid 161 via network 10.
+```bash
+ spdm_requester_emu --trans MCTP_KERNEL --eid 161 --net 10 --pcap SpdmRequester.pcap
+ ```

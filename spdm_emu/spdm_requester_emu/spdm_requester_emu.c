@@ -61,6 +61,23 @@ bool platform_client_routine(uint16_t port_number)
     size_t response_size;
     libspdm_return_t status;
 
+    if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP_KERNEL) {
+        if (m_use_eid == 0 || m_use_net == 0) {
+            printf("Platform MCTP kernel require to have valid EID and NET. eid = %d, net = %d\n",
+                   m_use_eid, m_use_net);
+            return false;
+        }
+
+        result = init_client_mctp_kernel(&platform_socket, m_use_eid, m_use_net);
+        if (!result) {
+            printf("Create platform service socket fail\n");
+            return false;
+        }
+
+        m_socket = platform_socket;
+        goto do_spdm;
+    }
+
     if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_TCP &&
         m_use_tcp_handshake == SOCKET_TCP_HANDSHAKE) {
         m_socket = CreateSocketAndHandShake(&platform_socket, port_number);
@@ -109,6 +126,7 @@ bool platform_client_routine(uint16_t port_number)
         }
     }
 
+do_spdm:
     m_spdm_context = spdm_client_init();
     if (m_spdm_context == NULL) {
         goto done;

@@ -4,6 +4,7 @@
  *  License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-emu/blob/main/LICENSE.md
  **/
 
+#include "command.h"
 #include "spdm_emu.h"
 #include "industry_standard/pcap.h"
 #include "industry_standard/link_type_ex.h"
@@ -30,6 +31,8 @@ bool open_pcap_packet_file(const char *pcap_file_name)
         pcap_global_header.network = LINKTYPE_MCTP;
     } else if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_PCI_DOE) {
         pcap_global_header.network = LINKTYPE_PCI_DOE;
+    } else if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP_KERNEL) {
+        pcap_global_header.network = LINKTYPE_MCTP;
     } else {
         return false;
     }

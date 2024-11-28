@@ -36,6 +36,8 @@ struct in_addr m_ip_address = { { { 127, 0, 0, 1 } } };
 struct in_addr m_ip_address = { 0x0100007F };
 #endif
 
+bool m_is_responder = false;
+
 void print_usage(const char *name)
 {
     printf("\n%s [--trans MCTP|PCI_DOE|TCP|NONE]\n", name);
@@ -197,7 +199,8 @@ value_string_entry_t m_transport_value_string_table[] = {
     { SOCKET_TRANSPORT_TYPE_NONE, "NONE"},
     { SOCKET_TRANSPORT_TYPE_MCTP, "MCTP" },
     { SOCKET_TRANSPORT_TYPE_PCI_DOE, "PCI_DOE" },
-    { SOCKET_TRANSPORT_TYPE_TCP, "TCP"}
+    { SOCKET_TRANSPORT_TYPE_TCP, "TCP"},
+    { SOCKET_TRANSPORT_TYPE_MCTP_KERNEL, "MCTP_KERNEL"}
 };
 
 value_string_entry_t m_tcp_subtype_string_table[] = {
@@ -1257,6 +1260,32 @@ void process_args(char *program_name, int argc, char *argv[])
             }
         }
 
+        if (strcmp(argv[0], "--eid") == 0) {
+            m_use_eid = (uint8_t)atoi(argv[1]);
+            if (argc >= 2 && m_use_eid < 256) {
+                argc -= 2;
+                argv += 2;
+                continue;
+            } else {
+                printf("invalid --eid\n");
+                print_usage(program_name);
+                exit(0);
+            }
+        }
+
+        if (strcmp(argv[0], "--net") == 0) {
+            m_use_net = (uint8_t)atoi(argv[1]);
+            if (argc >= 2 && m_use_net < 256) {
+                argc -= 2;
+                argv += 2;
+                continue;
+            } else {
+                printf("invalid --net\n");
+                print_usage(program_name);
+                exit(0);
+            }
+        }
+
         printf("invalid %s\n", argv[0]);
         print_usage(program_name);
         exit(0);
@@ -1324,6 +1353,74 @@ bool init_client(SOCKET *sock, uint16_t port)
     printf("connect success!\n");
 
     *sock = client_socket;
+    return true;
+}
+
+bool init_client_mctp_kernel(SOCKET *sock, uint16_t eid, uint16_t net)
+{
+    SOCKET client_socket;
+
+    m_is_responder = false;
+    client_socket = socket(AF_MCTP, SOCK_DGRAM, 0);
+    if (client_socket == INVALID_SOCKET) {
+        printf("Create socket Failed - %x\n",
+               errno
+               );
+        return false;
+    }
+
+    printf("connect success!\n");
+
+    *sock = client_socket;
+    return true;
+}
+
+bool create_socket_mctp_kernel(SOCKET *listen_socket, uint16_t eid, uint16_t net)
+{
+    struct sockaddr_mctp my_address;
+    int32_t res;
+
+    m_is_responder = true;
+    *listen_socket = socket(AF_MCTP, SOCK_DGRAM, 0);
+    if (INVALID_SOCKET == *listen_socket) {
+        printf("Cannot create server listen socket.  Error is 0x%x\n",
+               errno
+               );
+        return false;
+    }
+
+    /* When the program stops unexpectedly the used port will stay in the TIME_WAIT
+     * state which prevents other programs from binding to this port until a timeout
+     * triggers. This timeout may be 30s to 120s. In this state the responder cannot
+     * be restarted since it cannot bind to its port.
+     * To prevent this SO_REUSEADDR is applied to the socket which allows the
+     * responder to bind to this port even if it is still in the TIME_WAIT state.*/
+    if (setsockopt(*listen_socket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
+        printf("Cannot configure server listen socket.  Error is 0x%x\n",
+               errno
+               );
+        closesocket(*listen_socket);
+        return false;
+    }
+
+    libspdm_zero_mem(&my_address, sizeof(my_address));
+
+    my_address.smctp_family = AF_MCTP;
+    my_address.smctp_network = MCTP_NET_ANY;
+    /*my_address.smctp_network = net;*/
+    my_address.smctp_addr.s_addr = eid;
+    my_address.smctp_type = MCTP_MESSAGE_TYPE_SPDM;
+    my_address.smctp_tag = MCTP_TAG_OWNER;
+    res = bind(*listen_socket, (struct sockaddr *)&my_address,
+               sizeof(my_address));
+    if (res == SOCKET_ERROR) {
+        printf("Bind error.  Error is 0x%x\n",
+               errno
+               );
+        closesocket(*listen_socket);
+        return false;
+    }
+
     return true;
 }
 

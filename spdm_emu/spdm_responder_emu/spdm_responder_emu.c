@@ -163,6 +163,34 @@ bool platform_server(const SOCKET socket)
     }
 }
 
+bool platform_server_routine_mctp_kernel(uint16_t port_number)
+{
+    SOCKET responder_socket;
+    bool result;
+    bool continue_serving;
+
+    if (m_use_eid == 0 || m_use_net == 0) {
+        printf("Platform MCTP kernel require to have valid EID and NET. eid = %d, net = %d\n",
+               m_use_eid, m_use_net);
+        return false;
+    }
+
+    result = create_socket_mctp_kernel(&responder_socket, m_use_eid, m_use_net);
+    if (!result) {
+        printf("Create platform service socket fail\n");
+        return false;
+    }
+    m_server_socket = responder_socket;
+
+    do {
+        continue_serving = platform_server(m_server_socket);
+        closesocket(m_server_socket);
+    } while (continue_serving);
+
+    closesocket(responder_socket);
+    return true;
+}
+
 bool platform_server_routine(uint16_t port_number)
 {
     SOCKET responder_socket;
@@ -252,6 +280,8 @@ int main(int argc, char *argv[])
     if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_TCP) {
         /* The IANA has assigned port number 4194 for SPDM */
         result = platform_server_routine(TCP_SPDM_PLATFORM_PORT);
+    } else if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP_KERNEL) {
+        result = platform_server_routine_mctp_kernel(0);
     }
     else {
         result = platform_server_routine(DEFAULT_SPDM_PLATFORM_PORT);

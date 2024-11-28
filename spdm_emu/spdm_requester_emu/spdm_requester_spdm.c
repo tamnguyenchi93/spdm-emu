@@ -179,7 +179,8 @@ void *spdm_client_init(void)
     libspdm_register_device_io_func(spdm_context, spdm_device_send_message,
                                     spdm_device_receive_message);
 
-    if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP) {
+    if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP||
+        m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP_KERNEL) {
         libspdm_register_transport_layer_func(
             spdm_context,
             LIBSPDM_MAX_SPDM_MSG_SIZE,

@@ -21,7 +21,16 @@
 #include "command.h"
 #include "nv_storage.h"
 
+#include <sys/socket.h>
+#include <linux/mctp.h>
+/* hack to add MCTP header for PCAP*/
+#include "industry_standard/mctp.h"
+
+
 extern uint32_t m_use_transport_layer;
+extern uint32_t m_use_eid;
+extern uint32_t m_use_net;
+extern bool m_is_responder;
 extern uint32_t m_use_tcp_handshake;
 extern uint8_t m_use_version;
 extern uint8_t m_use_secured_message_version;
@@ -139,8 +148,10 @@ void process_args(char *program_name, int argc, char *argv[]);
 
 bool create_socket(uint16_t port_number, SOCKET *listen_socket);
 
+bool create_socket_mctp_kernel(SOCKET *listen_socket, uint16_t eid, uint16_t net);
 bool init_client(SOCKET *sock, uint16_t port);
 
+bool init_client_mctp_kernel(SOCKET *sock, uint16_t eid, uint16_t net);
 bool read_bytes(const SOCKET socket, uint8_t *buffer,
                 uint32_t number_of_bytes);
 

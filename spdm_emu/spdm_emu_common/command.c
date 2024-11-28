@@ -4,19 +4,33 @@
  *  License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-emu/blob/main/LICENSE.md
  **/
 
+#include "command.h"
 #include "spdm_emu.h"
 
 /* hack to add MCTP header for PCAP*/
 #include "industry_standard/mctp.h"
 
+/* MCTP kernel header */
+#include <linux/mctp.h>
+#include <sys/socket.h>
+
 uint32_t m_use_transport_layer = SOCKET_TRANSPORT_TYPE_MCTP;
+
+uint32_t m_use_eid = 0;
+uint32_t m_use_net = 0;
+/* MCTP kernel tag behavior requires response messages have tag value sent by requester.
+ * This array will be used to store received addr from recvfrom(), which contains tag value of incoming message
+ * */
+#define SPDM_EMU_MESSAGE_NUM 4
+static struct sockaddr_mctp m_addr[SPDM_EMU_MESSAGE_NUM];
+static uint8_t m_index = 0;
+socklen_t m_addrlen;
 
 uint32_t m_use_tcp_handshake = SOCKET_TCP_NO_HANDSHAKE;
 
 bool m_send_receive_buffer_acquired = false;
 uint8_t m_send_receive_buffer[LIBSPDM_MAX_SENDER_RECEIVER_BUFFER_SIZE];
 size_t m_send_receive_buffer_size;
-
 /**
  * Read number of bytes data in blocking mode.
  *
@@ -29,16 +43,26 @@ bool read_bytes(const SOCKET socket, uint8_t *buffer,
     int32_t result;
     uint32_t number_received;
 
+    /* Before receive clear addr */
+    libspdm_zero_mem (&m_addr[m_index], sizeof(m_addr[m_index]));
+    m_addrlen = sizeof(m_addr[m_index]);
     number_received = 0;
     while (number_received < number_of_bytes) {
+        if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP_KERNEL) {
+            result = recvfrom(socket, (char *)(buffer + number_received),
+                              number_of_bytes - number_received, MSG_TRUNC,
+                              (struct sockaddr *)&m_addr[m_index], &m_addrlen);
+            goto read_check_result;
+        }
         result = recv(socket, (char *)(buffer + number_received),
                       number_of_bytes - number_received, 0);
+read_check_result:
         if (result == -1) {
-            printf("Receive error - 0x%x\n",
+            printf("Receive error - 0x%x result = %d\n",
 #ifdef _MSC_VER
                    WSAGetLastError()
 #else
-                   errno
+                   errno, result
 #endif
                    );
             return false;
@@ -46,6 +70,7 @@ bool read_bytes(const SOCKET socket, uint8_t *buffer,
         if (result == 0) {
             return false;
         }
+        m_index++;
         number_received += result;
     }
     return true;
@@ -191,11 +216,24 @@ bool write_bytes(const SOCKET socket, const uint8_t *buffer,
     int32_t result;
     uint32_t number_sent;
 
+    m_index--;
     number_sent = 0;
     while (number_sent < number_of_bytes) {
+        if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP_KERNEL) {
+            if (m_is_responder == true) {
+                m_addr[m_index].smctp_tag &= ~MCTP_TAG_OWNER;
+            }
+            result = sendto(socket, (char *)(buffer + number_sent),
+                            number_of_bytes - number_sent,
+                            0, (struct sockaddr *)&m_addr[m_index], sizeof(m_addr[m_index]));
+            goto check_result;
+        }
+
         result = send(socket, (char *)(buffer + number_sent),
                       number_of_bytes - number_sent, 0);
+check_result:
         if (result == -1) {
+            m_index++;
 #ifdef _MSC_VER
             if (WSAGetLastError() == 0x2745) {
                 printf("Client disconnected\n");
@@ -262,6 +300,18 @@ bool send_platform_data(const SOCKET socket, uint32_t command,
     uint32_t request;
     uint32_t transport_type;
 
+    /* For requester m_addr will hold the responder for 4 message the will be sent by requester */
+    if (!m_is_responder) {
+        for (int i = 0; i < SPDM_EMU_MESSAGE_NUM; i++) {
+            memset(&m_addr[i], 0, sizeof(m_addr[i]));
+            m_addr[i].smctp_family = AF_MCTP;
+            m_addr[i].smctp_network = m_use_net;
+            m_addr[i].smctp_addr.s_addr = m_use_eid;
+            m_addr[i].smctp_tag = MCTP_TAG_OWNER;
+            m_addr[i].smctp_type = MCTP_MESSAGE_TYPE_SPDM;
+        }
+        m_index = SPDM_EMU_MESSAGE_NUM;
+    }
     request = command;
     result = write_data32(socket, request);
     if (!result) {

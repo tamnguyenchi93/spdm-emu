@@ -5,6 +5,7 @@
  **/
 
 #include "spdm_responder_emu.h"
+#include <string.h>
 
 void *m_spdm_context;
 #if LIBSPDM_FIPS_MODE
@@ -75,11 +76,11 @@ libspdm_return_t spdm_device_receive_message(void *spdm_context,
         receive_platform_data(m_server_socket, &m_command,
                               m_send_receive_buffer, &m_send_receive_buffer_size);
     if (!result) {
-        printf("receive_platform_data Error - %x\n",
+        printf("receive_platform_data Error - %x - %s\n",
 #ifdef _MSC_VER
                WSAGetLastError()
 #else
-               errno
+               errno, strerror(errno)
 #endif
                );
         return LIBSPDM_STATUS_RECEIVE_FAIL;
@@ -142,7 +143,8 @@ void *spdm_server_init(void)
     libspdm_register_device_io_func(spdm_context, spdm_device_send_message,
                                     spdm_device_receive_message);
 
-    if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP) {
+    if (m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP ||
+        m_use_transport_layer == SOCKET_TRANSPORT_TYPE_MCTP_KERNEL) {
         libspdm_register_transport_layer_func(
             spdm_context,
             LIBSPDM_MAX_SPDM_MSG_SIZE,
