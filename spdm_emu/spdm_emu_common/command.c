@@ -104,17 +104,18 @@ bool read_multiple_bytes(const SOCKET socket, uint8_t *buffer,
     uint32_t length;
     bool result;
 
-    result = read_data32(socket, &length);
-    if (!result) {
-        return result;
-    }
-    printf("Platform port Receive size: ");
-    length = ntohl(length);
-    dump_data((uint8_t *)&length, sizeof(uint32_t));
-    printf("\n");
-    length = ntohl(length);
-
-    *bytes_received = length;
+    /*result = read_data32(socket, &length);*/
+    /*if (!result) {*/
+    /*    return result;*/
+    /*}*/
+    /*printf("Platform port Receive size: ");*/
+    /*length = ntohl(length);*/
+    /*dump_data((uint8_t *)&length, sizeof(uint32_t));*/
+    /*printf("\n");*/
+    /*length = ntohl(length);*/
+    length = recvfrom(socket, NULL, 0, MSG_PEEK | MSG_TRUNC, NULL, 0);
+    *bytes_received = length+1;
+    buffer[0] =0x05;
     if (*bytes_received > max_buffer_length) {
         printf("buffer too small (0x%x). Expected - 0x%x\n",
                max_buffer_length, *bytes_received);
@@ -123,12 +124,12 @@ bool read_multiple_bytes(const SOCKET socket, uint8_t *buffer,
     if (length == 0) {
         return true;
     }
-    result = read_bytes(socket, buffer, length);
+    result = read_bytes(socket, &buffer[1], length);
     if (!result) {
         return result;
     }
     printf("Platform port Receive buffer:\n    ");
-    dump_data(buffer, length);
+    dump_data(buffer, *bytes_received);
     printf("\n");
 
     return true;
@@ -139,33 +140,33 @@ bool receive_platform_data(const SOCKET socket, uint32_t *command,
                            size_t *bytes_to_receive)
 {
     bool result;
-    uint32_t response;
-    uint32_t transport_type;
+    /*uint32_t response;*/
+    /*uint32_t transport_type;*/
     uint32_t bytes_received;
 
-    result = read_data32(socket, &response);
-    if (!result) {
-        return result;
-    }
-    *command = response;
-    printf("Platform port Receive command: ");
-    response = ntohl(response);
-    dump_data((uint8_t *)&response, sizeof(uint32_t));
-    printf("\n");
-
-    result = read_data32(socket, &transport_type);
-    if (!result) {
-        return result;
-    }
-    printf("Platform port Receive transport_type: ");
-    transport_type = ntohl(transport_type);
-    dump_data((uint8_t *)&transport_type, sizeof(uint32_t));
-    printf("\n");
-    transport_type = ntohl(transport_type);
-    if (transport_type != m_use_transport_layer) {
-        printf("transport_type mismatch\n");
-        return false;
-    }
+    /*result = read_data32(socket, &response);*/
+    /*if (!result) {*/
+    /*    return result;*/
+    /*}*/
+    /**command = response;*/
+    /*printf("Platform port Receive command: ");*/
+    /*response = ntohl(response);*/
+    /*dump_data((uint8_t *)&response, sizeof(uint32_t));*/
+    /*printf("\n");*/
+    /**/
+    /*result = read_data32(socket, &transport_type);*/
+    /*if (!result) {*/
+    /*    return result;*/
+    /*}*/
+    /*printf("Platform port Receive transport_type: ");*/
+    /*transport_type = ntohl(transport_type);*/
+    /*dump_data((uint8_t *)&transport_type, sizeof(uint32_t));*/
+    /*printf("\n");*/
+    /*transport_type = ntohl(transport_type);*/
+    /*if (transport_type != m_use_transport_layer) {*/
+    /*    printf("transport_type mismatch\n");*/
+    /*    return false;*/
+    /*}*/
 
     bytes_received = 0;
     result = read_multiple_bytes(socket, receive_buffer, &bytes_received,
@@ -178,6 +179,7 @@ bool receive_platform_data(const SOCKET socket, uint32_t *command,
     }
     *bytes_to_receive = bytes_received;
 
+    *command = SOCKET_SPDM_COMMAND_NORMAL;
     switch (*command) {
     case SOCKET_SPDM_COMMAND_SHUTDOWN:
         close_pcap_packet_file();
@@ -273,15 +275,15 @@ bool write_multiple_bytes(const SOCKET socket, const uint8_t *buffer,
 {
     bool result;
 
-    result = write_data32(socket, bytes_to_send);
-    if (!result) {
-        return result;
-    }
-    printf("Platform port Transmit size: ");
-    bytes_to_send = htonl(bytes_to_send);
-    dump_data((uint8_t *)&bytes_to_send, sizeof(uint32_t));
-    printf("\n");
-    bytes_to_send = htonl(bytes_to_send);
+    /*result = write_data32(socket, bytes_to_send);*/
+    /*if (!result) {*/
+    /*    return result;*/
+    /*}*/
+    /*printf("Platform port Transmit size: ");*/
+    /*bytes_to_send = htonl(bytes_to_send);*/
+    /*dump_data((uint8_t *)&bytes_to_send, sizeof(uint32_t));*/
+    /*printf("\n");*/
+    /*bytes_to_send = htonl(bytes_to_send);*/
 
     result = write_bytes(socket, buffer, bytes_to_send);
     if (!result) {
@@ -297,8 +299,8 @@ bool send_platform_data(const SOCKET socket, uint32_t command,
                         const uint8_t *send_buffer, size_t bytes_to_send)
 {
     bool result;
-    uint32_t request;
-    uint32_t transport_type;
+    /*uint32_t request;*/
+    /*uint32_t transport_type;*/
 
     /* For requester m_addr will hold the responder for 4 message the will be sent by requester */
     if (!m_is_responder) {
@@ -312,27 +314,27 @@ bool send_platform_data(const SOCKET socket, uint32_t command,
         }
         m_index = SPDM_EMU_MESSAGE_NUM;
     }
-    request = command;
-    result = write_data32(socket, request);
-    if (!result) {
-        return result;
-    }
-    printf("Platform port Transmit command: ");
-    request = htonl(request);
-    dump_data((uint8_t *)&request, sizeof(uint32_t));
-    printf("\n");
+    /*request = command;*/
+    /*result = write_data32(socket, request);*/
+    /*if (!result) {*/
+    /*    return result;*/
+    /*}*/
+    /*printf("Platform port Transmit command: ");*/
+    /*request = htonl(request);*/
+    /*dump_data((uint8_t *)&request, sizeof(uint32_t));*/
+    /*printf("\n");*/
+    /**/
+    /*result = write_data32(socket, m_use_transport_layer);*/
+    /*if (!result) {*/
+    /*    return result;*/
+    /*}*/
+    /*printf("Platform port Transmit transport_type: ");*/
+    /*transport_type = ntohl(m_use_transport_layer);*/
+    /*dump_data((uint8_t *)&transport_type, sizeof(uint32_t));*/
+    /*printf("\n");*/
 
-    result = write_data32(socket, m_use_transport_layer);
-    if (!result) {
-        return result;
-    }
-    printf("Platform port Transmit transport_type: ");
-    transport_type = ntohl(m_use_transport_layer);
-    dump_data((uint8_t *)&transport_type, sizeof(uint32_t));
-    printf("\n");
-
-    result = write_multiple_bytes(socket, send_buffer,
-                                  (uint32_t)bytes_to_send);
+    result = write_multiple_bytes(socket, &send_buffer[1],
+                                  (uint32_t)(bytes_to_send -1));
     if (!result) {
         return result;
     }

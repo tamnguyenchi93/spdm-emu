@@ -656,6 +656,7 @@ endif()
     if(NOT TOOLCHAIN STREQUAL "ARM_DS2022")
     add_subdirectory(spdm_emu/spdm_requester_emu)
     add_subdirectory(spdm_emu/spdm_responder_emu)
+    add_subdirectory(spdm_emu/spdm_emu_device)
 
     add_subdirectory(${COMMON_TEST_FRAMEWORK_DIR}/library/common_test_utility_lib out/common_test_utility_lib.out)
     add_subdirectory(${SPDM_RESPONDER_VALIDATOR_DIR}/library/spdm_responder_conformance_test_lib out/spdm_responder_conformance_test_lib.out)

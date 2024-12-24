@@ -1,0 +1,64 @@
+cmake_minimum_required(VERSION 3.5)
+
+include_directories(${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_device
+                    ${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_common
+                    ${PROJECT_SOURCE_DIR}/include
+                    ${LIBSPDM_DIR}/os_stub/spdm_device_secret_lib_sample
+                    ${LIBSPDM_DIR}/include
+                    ${LIBSPDM_DIR}/os_stub/include
+                    ${LIBSPDM_DIR}/os_stub
+)
+
+set(src_spdm_responder_emu
+    spdm_responder_spdm.c
+    spdm_responder_session.c
+    spdm_responder_mctp.c
+    spdm_responder_emu.c
+    ${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_common/spdm_emu.c
+    ${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_common/command.c
+    ${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_common/key.c
+    ${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_common/nv_storage.c
+    ${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_common/pcap.c
+    ${PROJECT_SOURCE_DIR}/spdm_emu/spdm_emu_common/support.c
+)
+
+set(spdm_responder_emu_LIBRARY
+    memlib
+    debuglib
+    spdm_responder_lib
+    spdm_common_lib
+    ${CRYPTO_LIB_PATHS}
+    rnglib
+    cryptlib_${CRYPTO}
+    malloclib
+    spdm_crypt_lib
+    spdm_crypt_ext_lib
+    spdm_secured_message_lib
+    spdm_transport_mctp_lib
+    spdm_device_secret_lib_sample
+    mctp_responder_lib
+    platform_lib
+)
+
+if((TOOLCHAIN STREQUAL "KLEE") OR (TOOLCHAIN STREQUAL "CBMC"))
+    add_executable(spdm_responder_emu
+                   ${src_spdm_responder_emu}
+                   $<TARGET_OBJECTS:memlib>
+                   $<TARGET_OBJECTS:debuglib>
+                   $<TARGET_OBJECTS:spdm_responder_lib>
+                   $<TARGET_OBJECTS:spdm_common_lib>
+                   $<TARGET_OBJECTS:${CRYPTO_LIB_PATHS}>
+                   $<TARGET_OBJECTS:rnglib>
+                   $<TARGET_OBJECTS:cryptlib_${CRYPTO}>
+                   $<TARGET_OBJECTS:malloclib>
+                   $<TARGET_OBJECTS:spdm_crypt_lib>
+                   $<TARGET_OBJECTS:spdm_secured_message_lib>
+                   $<TARGET_OBJECTS:spdm_transport_mctp_lib>
+                   $<TARGET_OBJECTS:spdm_device_secret_lib_sample>
+                   $<TARGET_OBJECTS:mctp_responder_lib>
+                   $<TARGET_OBJECTS:platform_lib>
+    )
+else()
+    add_executable(spdm_emu_device ${src_spdm_responder_emu})
+    target_link_libraries(spdm_emu_device ${spdm_responder_emu_LIBRARY})
+endif()

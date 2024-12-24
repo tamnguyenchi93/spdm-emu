@@ -85,7 +85,7 @@
  * example, if double-width division is implemented in software, disabling
  * it can reduce code size in some embedded targets.
  */
-/* #define MBEDTLS_NO_UDBL_DIVISION */
+ #define MBEDTLS_NO_UDBL_DIVISION 
 
 /**
  * \def MBEDTLS_NO_64BIT_MULTIPLICATION
@@ -136,7 +136,7 @@
  *       regardless of the setting of MBEDTLS_HAVE_TIME, unless
  *       MBEDTLS_TIMING_ALT is used. See timing.c for more information.
  */
-#define MBEDTLS_HAVE_TIME
+/*#define MBEDTLS_HAVE_TIME*/
 
 /**
  * \def MBEDTLS_HAVE_TIME_DATE
@@ -157,7 +157,7 @@
  * mbedtls_platform_gmtime_r() at compile-time by using the macro
  * MBEDTLS_PLATFORM_GMTIME_R_ALT.
  */
-#define MBEDTLS_HAVE_TIME_DATE
+/*#define MBEDTLS_HAVE_TIME_DATE*/
 
 /**
  * \def MBEDTLS_PLATFORM_MEMORY
@@ -3654,7 +3654,7 @@
  *
  * Module:  library/timing.c
  */
-/* #define MBEDTLS_TIMING_C */
+ #define MBEDTLS_TIMING_C 
 
 /**
  * \def MBEDTLS_VERSION_C

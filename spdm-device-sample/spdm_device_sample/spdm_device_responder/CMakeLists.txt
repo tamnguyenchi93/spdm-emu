@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     if(ARCH STREQUAL "x64")
-        set(CMAKE_EXE_LINKER_FLAGS "-nostdlib -flto -Wl,--entry,ModuleEntryPoint")
+        set(CMAKE_EXE_LINKER_FLAGS "-nostdlib -lrt -flto -Wl,--entry,ModuleEntryPoint")
     elseif(ARCH STREQUAL "aarch64")
         if(TOOLCHAIN STREQUAL "ARM_DS2022")
             set(CMAKE_EXE_LINKER_FLAGS "--target=aarch64-arm-none-eabi -nostdlib -flto -Wl,--entry,ModuleEntryPoint,--undefined=__udivti3")
